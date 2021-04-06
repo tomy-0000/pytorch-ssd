@@ -245,7 +245,7 @@ if __name__ == '__main__':
                                         dataset_type="test")
         logging.info(val_dataset)
     elif args.dataset_type == "coco":
-        val_dataset = COCODataset(args.validation_dataset, transform=test_transform,
+        val_dataset = COCODataset(dataset_path, transform=test_transform,
                                  target_transform=target_transform, is_test=True)
     logging.info("validation dataset size: {}".format(len(val_dataset)))
 

@@ -3,7 +3,6 @@ import json
 import re
 import os
 import numpy as np
-import pathlib
 import cv2
 
 
@@ -60,7 +59,7 @@ class COCODataset:
 
     @staticmethod
     def _read_image_ids(image_sets_file):
-        ids = glob.glob(image_sets_file)
+        ids = glob.glob(os.path.join(image_sets_file, "*"))
         return ids
 
     def _get_annotation(self, image_id):
@@ -72,7 +71,7 @@ class COCODataset:
             x1 = box[0]
             y1 = box[1]
             x2 = x1 + box[2]
-            y2 = y2 + box[3]
+            y2 = y1 + box[3]
             boxes.append([x1, y1, x2, y2])
 
             labels.append(self.class_dict["person"])
