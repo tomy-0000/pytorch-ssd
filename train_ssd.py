@@ -4,6 +4,7 @@ import logging
 import sys
 import itertools
 import cv2
+import datetime
 
 import torch
 from torch.utils.data import DataLoader, ConcatDataset
@@ -149,12 +150,12 @@ def train(loader, net, criterion, optimizer, device, debug_steps=100, epoch=-1):
                 f"Average Regression Loss {avg_reg_loss:.4f}, " +
                 f"Average Classification Loss: {avg_clf_loss:.4f}"
             )
+            writer.add_scalar("training loss", avg_loss, epoch*len(loader) + i)
             running_loss = 0.0
             running_regression_loss = 0.0
             running_classification_loss = 0.0
-            writer.add_scalar("Loss/train", loss, epoch*len(loader) + i)
 
-def test(loader, net, criterion, device):
+def test(loader, net, criterion, device, epoch):
     net.eval()
     running_loss = 0.0
     running_regression_loss = 0.0
@@ -175,6 +176,7 @@ def test(loader, net, criterion, device):
         running_loss += loss.item()
         running_regression_loss += regression_loss.item()
         running_classification_loss += classification_loss.item()
+    writer.add_scalar("test loss", running_loss/num, epoch)
     return running_loss / num, running_regression_loss / num, running_classification_loss / num
 
 def imwrite(dataset, net_type, epoch, model_path):
@@ -196,6 +198,7 @@ def imwrite(dataset, net_type, epoch, model_path):
     else:
         print("The net type is wrong. It should be one of vgg16-ssd, mb1-ssd and mb1-ssd-lite.")
         sys.exit(1)
+    net.load(model_path)
 
     if net_type == 'vgg16-ssd':
         predictor = create_vgg_ssd_predictor(net, candidate_size=200)
@@ -209,7 +212,7 @@ def imwrite(dataset, net_type, epoch, model_path):
         predictor = create_squeezenet_ssd_lite_predictor(net, candidate_size=200)
     else:
         predictor = create_vgg_ssd_predictor(net, candidate_size=200)
-    for i in range(50):
+    for i in range(10):
         image, orig_boxes, labels = dataset[i]
         orig_image = cv2.cvtColor(image, cv2.COLOR_RGB2BGR)
         boxes, labels, probs = predictor.predict(image, 10, 0.4)
@@ -222,19 +225,20 @@ def imwrite(dataset, net_type, epoch, model_path):
                         (box[0] + 3, box[1] + 5),
                         cv2.FONT_HERSHEY_SIMPLEX,
                         1,  # font scale
-                        (255, 0, 255),
+                        (255, 255, 0),
                         1)  # line type
         for j in range(orig_boxes.shape[0]):
             box = orig_boxes[j, :]
             cv2.rectangle(orig_image, (box[0], box[1]), (box[2], box[3]), (255, 0, 255), 1)
 
+        # orig_image = cv2.cvtColor(orig_image, cv2.COLOR_BGR2RGB)
         path = f"out/{i:02}_{epoch:04}.jpg"
         cv2.imwrite(path, orig_image)
 
 
 if __name__ == '__main__':
     timer = Timer()
-    writer = SummaryWriter("runs/mb2-ssd-lite")
+    writer = SummaryWriter(f"runs/mb2-ssd-lite-{datetime.datetime.now().strftime('%m-%d-%H-%M-%S')}")
 
     logging.info(args)
     if args.net == 'vgg16-ssd':
@@ -407,7 +411,7 @@ if __name__ == '__main__':
               device=DEVICE, debug_steps=args.debug_steps, epoch=epoch)
 
         if epoch % args.validation_epochs == 0 or epoch == args.num_epochs - 1:
-            val_loss, val_regression_loss, val_classification_loss = test(val_loader, net, criterion, DEVICE)
+            val_loss, val_regression_loss, val_classification_loss = test(val_loader, net, criterion, DEVICE, epoch)
             logging.info(
                 f"Epoch: {epoch}, " +
                 f"Validation Loss: {val_loss:.4f}, " +
