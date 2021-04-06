@@ -229,7 +229,7 @@ if __name__ == '__main__':
         else:
             raise ValueError(f"Dataset type {args.dataset_type} is not supported.")
         datasets.append(dataset)
-    logging.info(f"Stored labels into file {label_file}.")
+    # logging.info(f"Stored labels into file {label_file}.")
     train_dataset = ConcatDataset(datasets)
     logging.info("Train dataset size: {}".format(len(train_dataset)))
     train_loader = DataLoader(train_dataset, args.batch_size,
