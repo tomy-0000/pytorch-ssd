@@ -8,6 +8,7 @@ import cv2
 import torch
 from torch.utils.data import DataLoader, ConcatDataset
 from torch.optim.lr_scheduler import CosineAnnealingLR, MultiStepLR
+from torch.utils.tensorboard import SummaryWriter
 
 from vision.utils.misc import str2bool, Timer, freeze_net_layers, store_labels
 from vision.ssd.ssd import MatchPrior
@@ -90,7 +91,7 @@ parser.add_argument('--t_max', default=120, type=float,
                     help='T_max value for Cosine Annealing Scheduler.')
 
 # Train params
-parser.add_argument('--batch_size', default=2, type=int,
+parser.add_argument('--batch_size', default=32, type=int,
                     help='Batch size for training')
 parser.add_argument('--num_epochs', default=120, type=int,
                     help='the number epochs')
@@ -151,6 +152,7 @@ def train(loader, net, criterion, optimizer, device, debug_steps=100, epoch=-1):
             running_loss = 0.0
             running_regression_loss = 0.0
             running_classification_loss = 0.0
+            writer.add_scalar("Loss/train", loss, epoch*len(loader) + i)
 
 def test(loader, net, criterion, device):
     net.eval()
@@ -232,6 +234,7 @@ def imwrite(dataset, net_type, epoch, model_path):
 
 if __name__ == '__main__':
     timer = Timer()
+    writer = SummaryWriter("runs/mb2-ssd-lite")
 
     logging.info(args)
     if args.net == 'vgg16-ssd':
@@ -413,5 +416,5 @@ if __name__ == '__main__':
             )
             model_path = os.path.join(args.checkpoint_folder, f"{args.net}-Epoch-{epoch}-Loss-{val_loss}.pth")
             net.save(model_path)
-            logging.info(f"Saved model {model_path}")
+            # logging.info(f"Saved model {model_path}")
             imwrite(imwrite_dataset, args.net, epoch, model_path)
