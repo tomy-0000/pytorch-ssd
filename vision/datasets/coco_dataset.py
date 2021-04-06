@@ -15,10 +15,10 @@ class COCODataset:
         self.target_transform = target_transform
         if is_test:
             image_sets_file = os.path.join(self.root, "images/val2017")
-            annotation_file = os.path.join(self.root, "annotations/val2017")
+            annotation_file = os.path.join(self.root, "annotations/val2017.json")
         else:
             image_sets_file = os.path.join(self.root, "images/train2017")
-            annotation_file = os.path.join(self.root, "annotations/train2017")
+            annotation_file = os.path.join(self.root, "annotations/train2017.json")
         self.ids = COCODataset._read_image_ids(image_sets_file)
         with open(annotation_file) as f:
             annotation = json.load(f)
