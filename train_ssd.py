@@ -3,6 +3,7 @@ import os
 import logging
 import sys
 import itertools
+import cv2
 
 import torch
 from torch.utils.data import DataLoader, ConcatDataset
@@ -24,6 +25,13 @@ from vision.ssd.config import vgg_ssd_config
 from vision.ssd.config import mobilenetv1_ssd_config
 from vision.ssd.config import squeezenet_ssd_config
 from vision.ssd.data_preprocessing import TrainAugmentation, TestTransform
+
+from vision.ssd.vgg_ssd import create_vgg_ssd, create_vgg_ssd_predictor
+from vision.ssd.mobilenetv1_ssd import create_mobilenetv1_ssd, create_mobilenetv1_ssd_predictor
+from vision.ssd.mobilenetv1_ssd_lite import create_mobilenetv1_ssd_lite, create_mobilenetv1_ssd_lite_predictor
+from vision.ssd.squeezenet_ssd_lite import create_squeezenet_ssd_lite, create_squeezenet_ssd_lite_predictor
+from vision.ssd.mobilenet_v2_ssd_lite import create_mobilenetv2_ssd_lite, create_mobilenetv2_ssd_lite_predictor
+from vision.ssd.mobilenetv3_ssd_lite import create_mobilenetv3_large_ssd_lite, create_mobilenetv3_small_ssd_lite
 
 parser = argparse.ArgumentParser(
     description='Single Shot MultiBox Detector Training With Pytorch')
@@ -82,7 +90,7 @@ parser.add_argument('--t_max', default=120, type=float,
                     help='T_max value for Cosine Annealing Scheduler.')
 
 # Train params
-parser.add_argument('--batch_size', default=32, type=int,
+parser.add_argument('--batch_size', default=2, type=int,
                     help='Batch size for training')
 parser.add_argument('--num_epochs', default=120, type=int,
                     help='the number epochs')
@@ -144,7 +152,6 @@ def train(loader, net, criterion, optimizer, device, debug_steps=100, epoch=-1):
             running_regression_loss = 0.0
             running_classification_loss = 0.0
 
-
 def test(loader, net, criterion, device):
     net.eval()
     running_loss = 0.0
@@ -167,6 +174,60 @@ def test(loader, net, criterion, device):
         running_regression_loss += regression_loss.item()
         running_classification_loss += classification_loss.item()
     return running_loss / num, running_regression_loss / num, running_classification_loss / num
+
+def imwrite(dataset, net_type, epoch, model_path):
+    num_classes = len(dataset.class_names)
+    if net_type == 'vgg16-ssd':
+        net = create_vgg_ssd(num_classes, is_test=True)
+    elif net_type == 'mb1-ssd':
+        net = create_mobilenetv1_ssd(num_classes, is_test=True)
+    elif net_type == 'mb1-ssd-lite':
+        net = create_mobilenetv1_ssd_lite(num_classes, is_test=True)
+    elif net_type == 'mb2-ssd-lite':
+        net = create_mobilenetv2_ssd_lite(num_classes, is_test=True)
+    elif net_type == 'mb3-large-ssd-lite':
+        net = create_mobilenetv3_large_ssd_lite(num_classes, is_test=True)
+    elif net_type == 'mb3-small-ssd-lite':
+        net = create_mobilenetv3_small_ssd_lite(num_classes, is_test=True)
+    elif net_type == 'sq-ssd-lite':
+        net = create_squeezenet_ssd_lite(num_classes, is_test=True)
+    else:
+        print("The net type is wrong. It should be one of vgg16-ssd, mb1-ssd and mb1-ssd-lite.")
+        sys.exit(1)
+
+    if net_type == 'vgg16-ssd':
+        predictor = create_vgg_ssd_predictor(net, candidate_size=200)
+    elif net_type == 'mb1-ssd':
+        predictor = create_mobilenetv1_ssd_predictor(net, candidate_size=200)
+    elif net_type == 'mb1-ssd-lite':
+        predictor = create_mobilenetv1_ssd_lite_predictor(net, candidate_size=200)
+    elif net_type == 'mb2-ssd-lite' or net_type == "mb3-large-ssd-lite" or net_type == "mb3-small-ssd-lite":
+        predictor = create_mobilenetv2_ssd_lite_predictor(net, candidate_size=200)
+    elif net_type == 'sq-ssd-lite':
+        predictor = create_squeezenet_ssd_lite_predictor(net, candidate_size=200)
+    else:
+        predictor = create_vgg_ssd_predictor(net, candidate_size=200)
+    for i in range(50):
+        image, orig_boxes, labels = dataset[i]
+        orig_image = cv2.cvtColor(image, cv2.COLOR_RGB2BGR)
+        boxes, labels, probs = predictor.predict(image, 10, 0.4)
+
+        for j in range(boxes.size(0)):
+            box = boxes[j, :]
+            cv2.rectangle(orig_image, (box[0], box[1]), (box[2], box[3]), (255, 255, 0), 1)
+            label = f"{probs[j]:.2f}"
+            cv2.putText(orig_image, label,
+                        (box[0] + 3, box[1] + 5),
+                        cv2.FONT_HERSHEY_SIMPLEX,
+                        1,  # font scale
+                        (255, 0, 255),
+                        1)  # line type
+        for j in range(orig_boxes.shape[0]):
+            box = orig_boxes[j, :]
+            cv2.rectangle(orig_image, (box[0], box[1]), (box[2], box[3]), (255, 0, 255), 1)
+
+        path = f"out/{i:02}_{epoch:04}.jpg"
+        cv2.imwrite(path, orig_image)
 
 
 if __name__ == '__main__':
@@ -252,6 +313,15 @@ if __name__ == '__main__':
     val_loader = DataLoader(val_dataset, args.batch_size,
                             num_workers=args.num_workers,
                             shuffle=False)
+    logging.info("Prepare Imwrite datasets.")
+    if args.dataset_type == "voc":
+        imwrite_dataset = VOCDataset(args.validation_dataset, is_test=True)
+    elif args.dataset_type == 'open_images':
+        imwrite_dataset = OpenImagesDataset(dataset_path, dataset_type="test")
+        logging.info(val_dataset)
+    elif args.dataset_type == "coco":
+        imwrite_dataset = COCODataset(dataset_path, is_test=True)
+    logging.info("imwrite dataset size: {}".format(len(imwrite_dataset)))
     logging.info("Build network.")
     net = create_net(num_classes)
     min_loss = -10000.0
@@ -344,3 +414,4 @@ if __name__ == '__main__':
             model_path = os.path.join(args.checkpoint_folder, f"{args.net}-Epoch-{epoch}-Loss-{val_loss}.pth")
             net.save(model_path)
             logging.info(f"Saved model {model_path}")
+            imwrite(imwrite_dataset, args.net, epoch, model_path)
