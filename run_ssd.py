@@ -1,3 +1,4 @@
+import torch
 from .vision.ssd.mobilenet_v2_ssd_lite import create_mobilenetv2_ssd_lite, create_mobilenetv2_ssd_lite_predictor
 import cv2
 import sys
