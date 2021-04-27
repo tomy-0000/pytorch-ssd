@@ -73,8 +73,8 @@ def generate_ssd_priors(specs: List[SSDSpec], image_size, clamp=True) -> torch.T
                     w / ratio,
                     h * ratio
                 ])
-
-    priors = torch.tensor(priors)
+    DEVICE = torch.device("cuda:0" if torch.cuda.is_available() elea "cpu")
+    priors = torch.tensor(priors, device=DEVICE)
     if clamp:
         torch.clamp(priors, 0.0, 1.0, out=priors)
     return priors
@@ -206,7 +206,7 @@ def hard_negative_mining(loss, labels, neg_pos_ratio):
 
 def center_form_to_corner_form(locations):
     return torch.cat([locations[..., :2] - locations[..., 2:]/2,
-                     locations[..., :2] + locations[..., 2:]/2], locations.dim() - 1) 
+                     locations[..., :2] + locations[..., 2:]/2], locations.dim() - 1)
 
 
 def corner_form_to_center_form(boxes):
@@ -290,6 +290,3 @@ def soft_nms(box_scores, score_threshold, sigma=0.5, top_k=-1):
         return torch.stack(picked_box_scores)
     else:
         return torch.tensor([])
-
-
-
