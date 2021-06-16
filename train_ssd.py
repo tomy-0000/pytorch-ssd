@@ -22,6 +22,7 @@ from vision.ssd.squeezenet_ssd_lite import create_squeezenet_ssd_lite
 from vision.datasets.voc_dataset import VOCDataset
 from vision.datasets.open_images import OpenImagesDataset
 from vision.datasets.coco_dataset import COCODataset
+from vision.datasets.custom_dataset import CustomDataset
 from vision.nn.multibox_loss import MultiboxLoss
 from vision.ssd.config import vgg_ssd_config
 from vision.ssd.config import mobilenetv1_ssd_config
@@ -293,7 +294,10 @@ if __name__ == '__main__':
             dataset = COCODataset(dataset_path, transform=train_transform,
                                   target_transform=target_transform)
             num_classes = len(dataset.class_names)
-
+        elif args.dataset_type == "custom":
+            dataset = CustomDataset(dataset_path, args.batch_size*1000, transform=train_transform,
+                                  target_transform=target_transform)
+            num_classes = len(dataset.class_names)
         else:
             raise ValueError(f"Dataset type {args.dataset_type} is not supported.")
         datasets.append(dataset)
@@ -315,6 +319,9 @@ if __name__ == '__main__':
     elif args.dataset_type == "coco":
         val_dataset = COCODataset(dataset_path, transform=test_transform,
                                  target_transform=target_transform, is_test=True)
+    elif args.dataset_type == "custom":
+        val_dataset = CustomDataset(dataset_path, args.batch_size*1000, transform=test_transform,
+                                 target_transform=target_transform, is_test=True)
     logging.info("validation dataset size: {}".format(len(val_dataset)))
 
     val_loader = DataLoader(val_dataset, args.batch_size,
@@ -328,6 +335,8 @@ if __name__ == '__main__':
         logging.info(val_dataset)
     elif args.dataset_type == "coco":
         imwrite_dataset = COCODataset(dataset_path, is_test=True)
+    elif args.dataset_type == "custom":
+        imwrite_dataset = CustomDataset(dataset_path, args.batch_size, is_test=True)
     logging.info("imwrite dataset size: {}".format(len(imwrite_dataset)))
     logging.info("Build network.")
     net = create_net(num_classes)
