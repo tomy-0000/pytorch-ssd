@@ -34,7 +34,7 @@ class CustomDataset:
             image_sets_file = os.path.join(self.root, "test")
         else:
             image_sets_file = os.path.join(self.root, "train")
-        self.ids_hand, self.ids_background = CustomDataset._read_image_ids(image_sets_file)
+        self.ids_hand, self.ids_background = self._read_image_ids(image_sets_file)
 
         self.class_names = ("BACKGROUND", "GUU", "PAA")
 
