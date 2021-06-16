@@ -57,9 +57,9 @@ class CustomDataset:
         for img_path in img_path_chosen:
             img = Image.open(img_path)
             if "GUU" in img_path:
-                label = "GUU"
+                label = self.class_dict["GUU"]
             else:
-                label = "PAA"
+                label = self.class_dict["PAA"]
             transparent = Image.new("RGBA", (2000, 2000), (0, 0, 0, 0))
             img_w, img_h = img.size
             transparent.paste(img, (1000 - img_w//2, 1000 - img_h//2), mask=img)
