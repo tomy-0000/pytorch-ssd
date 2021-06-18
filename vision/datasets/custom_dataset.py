@@ -43,7 +43,7 @@ class CustomDataset:
 
     def __getitem__(self, _):
         background_path = random.choice(self.ids_background)
-        background = Image.open(background_path)
+        background = Image.open(background_path).convert("RGB")
         background_w, background_h = background.size
         num = random.randint(1, 5)
         img_path_chosen = random.choices(self.ids_hand, k=num)
@@ -81,8 +81,11 @@ class CustomDataset:
             img2 = self.transform3(img.convert("RGB"))
             img.paste(img2, mask=img)
             img_w, img_h = img2.size
-            rand_w = random.randint(0, background_w - img_w)
-            rand_h = random.randint(0, background_h - img_h)
+            try:
+                rand_w = random.randint(0, background_w - img_w)
+                rand_h = random.randint(0, background_h - img_h)
+            except:
+                continue
             background.paste(img, (rand_w, rand_h), mask=img)
             boxes.append([rand_w, rand_h, rand_w + img_w, rand_h + img_h])
             labels.append(label)
