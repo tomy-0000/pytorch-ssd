@@ -97,7 +97,7 @@ parser.add_argument('--batch_size', default=32, type=int,
                     help='Batch size for training')
 parser.add_argument('--num_epochs', default=120, type=int,
                     help='the number epochs')
-parser.add_argument('--num_workers', default=4, type=int,
+parser.add_argument('--num_workers', default=0, type=int,
                     help='Number of workers used in dataloading')
 parser.add_argument('--validation_epochs', default=5, type=int,
                     help='the number epochs')
@@ -232,7 +232,6 @@ def imwrite(dataset, net_type, epoch, model_path):
             box = orig_boxes[j, :]
             cv2.rectangle(orig_image, (box[0], box[1]), (box[2], box[3]), (255, 0, 255), 1)
 
-        # orig_image = cv2.cvtColor(orig_image, cv2.COLOR_BGR2RGB)
         path = f"out/{i:02}_{epoch:04}.jpg"
         cv2.imwrite(path, orig_image)
 
