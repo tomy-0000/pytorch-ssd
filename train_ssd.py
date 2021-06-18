@@ -218,8 +218,9 @@ def imwrite(dataset, net_type, epoch, model_path):
         orig_image = cv2.cvtColor(image, cv2.COLOR_RGB2BGR)
         boxes, labels, probs = predictor.predict(image, 10, 0.4)
 
-        for j in range(boxes.size(0)):
+        for j in range(boxes.size(0)):  # predict
             box = boxes[j, :]
+            box = [int(i) for i in box]
             cv2.rectangle(orig_image, (box[0], box[1]), (box[2], box[3]), (255, 255, 0), 1)
             label = f"{probs[j]:.2f}"
             cv2.putText(orig_image, label,
@@ -228,13 +229,12 @@ def imwrite(dataset, net_type, epoch, model_path):
                         1,  # font scale
                         (255, 255, 0),
                         1)  # line type
-        for j in range(orig_boxes.shape[0]):
+        for j in range(orig_boxes.shape[0]):  # ground truth
             box = orig_boxes[j, :]
             cv2.rectangle(orig_image, (box[0], box[1]), (box[2], box[3]), (255, 0, 255), 1)
 
         path = f"out/{i:02}_{epoch:04}.jpg"
         cv2.imwrite(path, orig_image)
-
 
 if __name__ == '__main__':
     timer = Timer()
