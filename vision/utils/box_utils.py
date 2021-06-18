@@ -74,7 +74,7 @@ def generate_ssd_priors(specs: List[SSDSpec], image_size, clamp=True) -> torch.T
                     h * ratio
                 ])
     DEVICE = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
-    priors = torch.tensor(priors, device=DEVICE)
+    priors = torch.tensor(priors)
     if clamp:
         torch.clamp(priors, 0.0, 1.0, out=priors)
     return priors
